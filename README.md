@@ -1,10 +1,10 @@
 1. Install dependencies (once):
 ```bash
-pip install requests Pillow
+pip3 install requests Pillow
 ```
 2. Run it:
 ```bash
-python weather_display.py
+python3 weather.py
 ```
 
 
