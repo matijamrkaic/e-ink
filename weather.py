@@ -1,5 +1,5 @@
 """
-weather_display.py
+weather.py
 ==================
 A weather dashboard that generates an 800x480 image — the exact size of a
 7.5" Waveshare e-ink display. On your MacBook it saves a PNG and opens it.
@@ -16,7 +16,7 @@ Requirements (install once):
   pip install requests Pillow
 
 Run:
-  python weather_display.py
+  python weather.py
 """
 
 # ── Imports ──────────────────────────────────────────────────────────────────
