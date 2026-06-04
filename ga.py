@@ -42,7 +42,12 @@ from garminconnect import (
 GARMIN_EMAIL = os.environ.get("GARMIN_EMAIL")
 GARMIN_PASSWORD = os.environ.get("GARMIN_PASSWORD")
 
-# Where to cache OAuth tokens so we don't log in fresh every run.
+# Headless auth for CI: garminconnect natively reads a serialized token string
+# from the GARMINTOKENS env var (login() loads it when it's longer than a path).
+# Set it as a GitHub Actions secret so the workflow never needs the password.
+GARMIN_TOKENS = os.environ.get("GARMINTOKENS")
+
+# Where to cache the token store on disk so we don't log in fresh every run.
 TOKEN_STORE = os.path.expanduser("~/.garminconnect")
 
 # How many days of history to include in the trend chart (including today).
@@ -56,29 +61,55 @@ OUTPUT_FILE = "garmin_preview.png"
 
 
 # ── Step 1: Fetch Garmin data ────────────────────────────────────────────────
+def _print_token_blob(api):
+    """
+    Print the current session as a one-line token string. Copy it into a GitHub
+    Actions secret named GARMINTOKENS so CI can authenticate headlessly —
+    login() reads that env var natively and loads the string (no password, no
+    MFA on the runner).
+    """
+    blob = api.client.dumps()
+    print("\n" + "─" * 70)
+    print("GARMINTOKENS (store this as a GitHub Actions secret):")
+    print("─" * 70)
+    print(blob)
+    print("─" * 70 + "\n")
+
+
 def _login():
     """
     Log into Garmin Connect, re-using cached tokens when possible.
-    Garmin's auth is OAuth-based; the garminconnect lib stores tokens on disk
-    so subsequent runs skip the password round-trip.
+
+    garminconnect's own login(tokenstore) handles all three cases for us:
+      • tokenstore is a serialized token string (CI, via GARMINTOKENS) → load it
+      • tokenstore is a path with cached tokens (local repeat run)     → resume
+      • no/invalid tokens but email+password set                        → log in
+        fresh and persist to the path
+    So we just hand it the right tokenstore and let it self-heal.
     """
-    if not GARMIN_EMAIL or not GARMIN_PASSWORD:
+    have_cache = os.path.exists(TOKEN_STORE)
+    if not GARMIN_TOKENS and not have_cache and not (GARMIN_EMAIL and GARMIN_PASSWORD):
         sys.exit(
-            "✗ Missing credentials. Set GARMIN_EMAIL and GARMIN_PASSWORD "
-            "environment variables and try again."
+            "✗ Missing credentials. Set GARMINTOKENS (preferred for CI) or "
+            "GARMIN_EMAIL + GARMIN_PASSWORD and try again."
         )
 
     api = Garmin(email=GARMIN_EMAIL, password=GARMIN_PASSWORD)
 
+    # Prefer the serialized token string from the env (CI); otherwise use the
+    # on-disk cache path, which login() also writes back to after a fresh login.
+    tokenstore = GARMIN_TOKENS or TOKEN_STORE
+
     try:
-        # Try resuming with cached tokens first
-        api.login(TOKEN_STORE)
-        print("  ✓ Resumed Garmin session from cached tokens")
-    except (FileNotFoundError, GarminConnectAuthenticationError):
-        print("  → No valid cached session, logging in fresh...")
-        api.login()
-        api.garth.dump(TOKEN_STORE)
-        print(f"  ✓ Logged in and cached tokens at {TOKEN_STORE}")
+        api.login(tokenstore)
+        print("  ✓ Garmin session ready")
+    except (GarminConnectAuthenticationError, FileNotFoundError) as err:
+        sys.exit(f"✗ Garmin authentication failed: {err}")
+
+    # On local runs, surface the token string so it can be pasted into the CI
+    # secret. Skip when GARMINTOKENS is already set (i.e. we're on the runner).
+    if not GARMIN_TOKENS:
+        _print_token_blob(api)
 
     return api
 

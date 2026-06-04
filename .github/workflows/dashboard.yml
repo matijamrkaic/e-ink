@@ -1,0 +1,114 @@
+name: Garmin e-ink dashboard
+
+# Regenerate the dashboard image and publish it to GitHub Pages.
+on:
+  schedule:
+    # Target: 08:00, 12:00, 20:00 Europe/Berlin (CET/CEST). GitHub cron is UTC
+    # and ignores DST, so we fire at BOTH the winter (UTC+1) and summer (UTC+2)
+    # candidate hours, then the "gate" job drops the ones that aren't 8/12/20
+    # local. Net result: exactly 3 runs/day at the right local times year-round.
+    #   08:00 local -> 06:00 (CEST) / 07:00 (CET) UTC
+    #   12:00 local -> 10:00 (CEST) / 11:00 (CET) UTC
+    #   20:00 local -> 18:00 (CEST) / 19:00 (CET) UTC
+    - cron: "0 6,7,10,11,18,19 * * *"
+  workflow_dispatch: {}       # allow manual runs from the Actions tab (always proceed)
+
+# Permissions needed to deploy to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; let a new run supersede an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # DST-aware gate: only let scheduled runs through at 08/12/20 Berlin time.
+  # Manual (workflow_dispatch) runs always pass.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual/non-schedule run -> proceed"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hour=$(TZ="Europe/Berlin" date +%-H)
+          echo "Berlin local hour is $hour"
+          case "$hour" in
+            8|12|20) echo "run=true"  >> "$GITHUB_OUTPUT" ;;
+            *)       echo "run=false" >> "$GITHUB_OUTPUT" ; echo "Not a target hour -> skip" ;;
+          esac
+
+  build-and-deploy:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system fonts
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+
+      - name: Install Python dependencies
+        run: pip install garminconnect Pillow
+
+      - name: Generate dashboard image
+        env:
+          GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python ga.py
+
+      - name: Assemble Pages site
+        run: |
+          mkdir -p _site
+          cp garmin_preview.png _site/garmin_preview.png
+          # Tiny human-friendly viewer; the device fetches the .png directly.
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Garmin e-ink dashboard</title>
+            <style>
+              body { font-family: system-ui, sans-serif; background:#111; color:#eee;
+                     display:flex; flex-direction:column; align-items:center; gap:1rem;
+                     padding:2rem; }
+              img { image-rendering: pixelated; border:1px solid #444; max-width:100%; }
+              code { background:#222; padding:.2rem .4rem; border-radius:4px; }
+            </style>
+          </head>
+          <body>
+            <h1>Garmin e-ink dashboard</h1>
+            <img src="garmin_preview.png" alt="dashboard" width="800" height="480" />
+            <p>Direct image URL: <code>garmin_preview.png</code> · refreshed every 12h</p>
+          </body>
+          </html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
