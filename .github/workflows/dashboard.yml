@@ -3,14 +3,24 @@ name: Garmin e-ink dashboard
 # Regenerate the dashboard image and publish it to GitHub Pages.
 on:
   schedule:
-    # Target: 08:00, 12:00, 20:00 Europe/Berlin (CET/CEST). GitHub cron is UTC
-    # and ignores DST, so we fire at BOTH the winter (UTC+1) and summer (UTC+2)
-    # candidate hours, then the "gate" job drops the ones that aren't 8/12/20
-    # local. Net result: exactly 3 runs/day at the right local times year-round.
+    # Target: 08:00, 12:00, 20:00 Europe/Berlin (CET/CEST). GitHub cron is UTC and
+    # ignores DST, so we schedule BOTH the summer (UTC+2) and winter (UTC+1)
+    # candidate hours and let the "gate" job keep only the ones valid for the
+    # current offset. Net result: exactly 3 runs/day at the right local times.
     #   08:00 local -> 06:00 (CEST) / 07:00 (CET) UTC
     #   12:00 local -> 10:00 (CEST) / 11:00 (CET) UTC
     #   20:00 local -> 18:00 (CEST) / 19:00 (CET) UTC
-    - cron: "0 6,7,10,11,18,19 * * *"
+    #
+    # IMPORTANT: one hour per line (not "0 6,7,... * * *"). The gate reads
+    # github.event.schedule — the *scheduled* cron — so it's immune to GitHub's
+    # cron-delivery delays (which can be 1h+). A single multi-hour line would
+    # report the whole expression and we couldn't tell which hour fired.
+    - cron: "0 6 * * *"   # 08:00 CEST
+    - cron: "0 7 * * *"   # 08:00 CET
+    - cron: "0 10 * * *"  # 12:00 CEST
+    - cron: "0 11 * * *"  # 12:00 CET
+    - cron: "0 18 * * *"  # 20:00 CEST
+    - cron: "0 19 * * *"  # 20:00 CET
   workflow_dispatch: {} # allow manual runs from the Actions tab (always proceed)
 
 # Permissions needed to deploy to GitHub Pages.
@@ -25,8 +35,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # DST-aware gate: only let scheduled runs through at 08/12/20 Berlin time.
-  # Manual (workflow_dispatch) runs always pass.
+  # DST-aware gate: keep only the scheduled cron that matches the current
+  # Berlin UTC offset. Decides from the *scheduled* hour (github.event.schedule),
+  # not the wall clock, so GitHub's cron-delivery delays can't push a run past an
+  # hour boundary and drop it. Manual (workflow_dispatch) runs always pass.
   gate:
     runs-on: ubuntu-latest
     outputs:
@@ -39,11 +51,15 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          hour=$(TZ="Europe/Berlin" date +%-H)
-          echo "Berlin local hour is $hour"
-          case "$hour" in
-            8|12|20) echo "run=true"  >> "$GITHUB_OUTPUT" ;;
-            *)       echo "run=false" >> "$GITHUB_OUTPUT" ; echo "Not a target hour -> skip" ;;
+          # Which scheduled cron fired? e.g. "0 6 * * *" -> utc_hour=6
+          utc_hour=$(echo "${{ github.event.schedule }}" | awk '{print $2}')
+          # Current Berlin offset: +0200 (CEST/summer) or +0100 (CET/winter).
+          offset=$(TZ="Europe/Berlin" date +%z)
+          if [ "$offset" = "+0200" ]; then valid="6 10 18"; else valid="7 11 19"; fi
+          echo "scheduled utc_hour=$utc_hour, Berlin offset=$offset, valid={$valid}"
+          case " $valid " in
+            *" $utc_hour "*) echo "run=true"  >> "$GITHUB_OUTPUT" ; echo "Valid for current offset -> proceed" ;;
+            *)               echo "run=false" >> "$GITHUB_OUTPUT" ; echo "Off-offset candidate -> skip" ;;
           esac
 
   build-and-deploy:
@@ -100,8 +116,19 @@ jobs:
           </head>
           <body>
             <h1>Family e-ink dashboard</h1>
-            <img src="dashboard.png" alt="dashboard" width="800" height="480" />
+            <img id="dash" src="dashboard.png" data-base="dashboard.png"
+                 alt="dashboard" width="800" height="480" />
             <p>Direct image URL: <code>dashboard.png</code> · refreshed at 8:00 12:00 20:00</p>
+            <script>
+              // GitHub Pages' CDN caches the PNG for minutes, so a plain <img>
+              // would show a stale dashboard. Append a unique ?t= so the browser
+              // always fetches the latest, and re-fetch every 5 min for tabs left
+              // open. (The e-ink device must do the same on its own request.)
+              var img = document.getElementById("dash");
+              function refresh() { img.src = img.dataset.base + "?t=" + Date.now(); }
+              refresh();
+              setInterval(refresh, 5 * 60 * 1000);
+            </script>
           </body>
           </html>
           HTML
