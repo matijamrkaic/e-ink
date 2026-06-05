@@ -36,7 +36,17 @@ def draw_quote(draw, box, quote, fonts):
     if not quote:
         return
 
+    # Wrap the quote in curly quotes. If the last line is an attribution
+    # (e.g. "— Seneca"), keep the closing quote before it, not around it.
     raw_lines = quote.splitlines()
+    attribution = None
+    if len(raw_lines) > 1 and raw_lines[-1].lstrip().startswith(("—", "–", "-")):
+        attribution = raw_lines.pop()
+    if raw_lines:
+        raw_lines[0] = "“" + raw_lines[0]
+        raw_lines[-1] = raw_lines[-1] + "”"
+    if attribution is not None:
+        raw_lines.append(attribution)
 
     # Try fonts largest-first; pick the biggest that fits the box height.
     for font_name in ("medium", "small", "tiny"):
