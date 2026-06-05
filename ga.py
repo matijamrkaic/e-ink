@@ -25,11 +25,8 @@ Run:
 # ── Imports ──────────────────────────────────────────────────────────────────
 import json
 import os
-import subprocess
 import sys
 from datetime import date, datetime, timedelta
-
-from PIL import Image, ImageDraw, ImageFont
 
 from garminconnect import (
     Garmin,
@@ -37,6 +34,7 @@ from garminconnect import (
     GarminConnectConnectionError,
     GarminConnectTooManyRequestsError,
 )
+from PIL import Image, ImageDraw, ImageFont
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 GARMIN_EMAIL = os.environ.get("GARMIN_EMAIL")
@@ -329,11 +327,16 @@ def draw_image(g):
     # Progress bar
     bar_x, bar_y = 20, MID_TOP + 165
     bar_w, bar_h = LEFT_W - 40, 18
-    draw.rectangle([(bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h)], outline=BLACK, width=2)
+    draw.rectangle(
+        [(bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h)], outline=BLACK, width=2
+    )
     fill_w = int(bar_w * g["step_pct"])
     if fill_w > 0:
         draw.rectangle(
-            [(bar_x + 2, bar_y + 2), (bar_x + 2 + max(0, fill_w - 4), bar_y + bar_h - 2)],
+            [
+                (bar_x + 2, bar_y + 2),
+                (bar_x + 2 + max(0, fill_w - 4), bar_y + bar_h - 2),
+            ],
             fill=BLACK,
         )
 
@@ -361,7 +364,10 @@ def draw_image(g):
         ("CALORIES", f"{int(g['calories']):,}"),
         ("ACTIVE CAL", f"{int(g['active_calories']):,}"),
         ("STRESS", f"{g['stress']}" if g["stress"] is not None else "—"),
-        ("BODY BATTERY", f"{g['body_battery']}" if g["body_battery"] is not None else "—"),
+        (
+            "BODY BATTERY",
+            f"{g['body_battery']}" if g["body_battery"] is not None else "—",
+        ),
     ]
 
     detail_x = LEFT_W + 25
@@ -445,17 +451,6 @@ def draw_image(g):
     return img
 
 
-# ── Step 5: Save and preview ──────────────────────────────────────────────────
-def save_and_preview(img):
-    img.save(OUTPUT_FILE)
-    print(f"  ✓ Saved to {OUTPUT_FILE}")
-    if sys.platform == "darwin":
-        subprocess.run(["open", OUTPUT_FILE])
-        print("  ✓ Opened in Preview")
-    else:
-        print(f"  → Open {OUTPUT_FILE} manually to view it")
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     print("\n╔══════════════════════════════════╗")
@@ -472,7 +467,7 @@ def main():
     img = draw_image(g)
 
     print()
-    save_and_preview(img)
+    img.save(OUTPUT_FILE)
 
     print("\n✓ Done!\n")
 
