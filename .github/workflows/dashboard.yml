@@ -11,7 +11,7 @@ on:
     #   12:00 local -> 10:00 (CEST) / 11:00 (CET) UTC
     #   20:00 local -> 18:00 (CEST) / 19:00 (CET) UTC
     - cron: "0 6,7,10,11,18,19 * * *"
-  workflow_dispatch: {}       # allow manual runs from the Actions tab (always proceed)
+  workflow_dispatch: {} # allow manual runs from the Actions tab (always proceed)
 
 # Permissions needed to deploy to GitHub Pages.
 permissions:
@@ -73,15 +73,15 @@ jobs:
         env:
           # Runner is UTC; render the dashboard's date/time in local time.
           TZ: Europe/Berlin
-          GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-        run: python ga.py
+          # Two Garmin accounts — one token blob each (set as repo secrets).
+          GARMINTOKENS_H: ${{ secrets.GARMINTOKENS_H }}
+          GARMINTOKENS_W: ${{ secrets.GARMINTOKENS_W }}
+        run: python dashboard.py
 
       - name: Assemble Pages site
         run: |
           mkdir -p _site
-          cp garmin_preview.png _site/garmin_preview.png
+          cp dashboard.png _site/dashboard.png
           # Tiny human-friendly viewer; the device fetches the .png directly.
           cat > _site/index.html <<'HTML'
           <!doctype html>
@@ -99,9 +99,9 @@ jobs:
             </style>
           </head>
           <body>
-            <h1>Garmin e-ink dashboard</h1>
-            <img src="garmin_preview.png" alt="dashboard" width="800" height="480" />
-            <p>Direct image URL: <code>garmin_preview.png</code> · refreshed every 12h</p>
+            <h1>Family e-ink dashboard</h1>
+            <img src="dashboard.png" alt="dashboard" width="800" height="480" />
+            <p>Direct image URL: <code>dashboard.png</code> · refreshed at 8:00 12:00 20:00</p>
           </body>
           </html>
           HTML
