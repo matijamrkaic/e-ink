@@ -71,6 +71,8 @@ jobs:
 
       - name: Generate dashboard image
         env:
+          # Runner is UTC; render the dashboard's date/time in local time.
+          TZ: Europe/Berlin
           GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
