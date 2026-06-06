@@ -36,11 +36,15 @@ in `LAYOUT`, then wire it in `dashboard.py`.
 
 ## Run locally
 ```bash
-pip3 install -r requirements.txt        # garminconnect + Pillow + requests + python-dotenv
+python3 -m venv .venv                    # create a virtual environment (once)
+source .venv/bin/activate                # activate it (re-run in each new shell)
+pip install -r requirements.txt          # garminconnect + Pillow + requests + python-dotenv
 
 cp .env.example .env                     # then fill in your two Garmin logins
-python3 dashboard.py                     # writes dashboard.png
+python dashboard.py                      # writes dashboard.png
 ```
+The `.venv` keeps dependencies isolated from your system Python. Activate it in
+any new terminal (`source .venv/bin/activate`) before running the scripts.
 `config.py` auto-loads `.env` (gitignored), so credentials are set once and
 `python3 dashboard.py` just works — no re-exporting per shell. The vars are
 `GARMIN_EMAIL_H` / `GARMIN_PASSWORD_H` (husband) and `..._W` (wife); exporting
@@ -49,6 +53,15 @@ them in your shell instead works too.
 OAuth tokens are cached per person in `~/.garminconnect_h` / `~/.garminconnect_w`
 so subsequent runs skip the password round-trip. Edit `LATITUDE` / `LONGITUDE` /
 `TIMEZONE` in `config.py` to change the weather location.
+
+## Iterate on the layout (offline, no Garmin)
+When you're tweaking panels or `LAYOUT`, you don't want to hit Garmin/weather on
+every run. Use the fixture-based preview — it renders instantly with no network:
+```bash
+python3 preview.py            # render dashboard.png from sample data
+python3 preview.py --debug    # overlay the LAYOUT region grid (= config.DEBUG_BOXES)
+```
+Keep `dashboard.png` open in Preview; it auto-reloads each time you re-run.
 
 ## Automated hosting (GitHub Actions → GitHub Pages)
 `.github/workflows/dashboard.yml` regenerates the image **3× a day** — at
