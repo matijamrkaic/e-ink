@@ -7,8 +7,8 @@ venv/
 .venv/
 path/to/venv/
 
-# Local secrets — never commit. Copy .env.example → .env and fill it in.
 .env
+.DS_Store
 
 # Garmin token store / exported token blobs — never commit these
 .garminconnect/

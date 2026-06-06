@@ -62,9 +62,9 @@ QUOTES_FILE = "quotes.txt"
 # ── Layout ────────────────────────────────────────────────────────────────────
 # Each region is (x0, y0, x1, y1) on the canvas. Edit these to rearrange.
 LAYOUT = {
-    "header": (0, 0, DISPLAY_WIDTH, 130),
-    "quote": (0, 130, 400, DISPLAY_HEIGHT),
-    "health": (400, 130, DISPLAY_WIDTH, DISPLAY_HEIGHT),
+    "header": (0, 0, DISPLAY_WIDTH, 120),
+    "health": (0, 120, DISPLAY_WIDTH, 370),
+    "quote": (0, 370, DISPLAY_WIDTH, DISPLAY_HEIGHT),  # full-width bottom strip
 }
 
 # Flip to True to draw each region's outline + name. Great for layout iteration.

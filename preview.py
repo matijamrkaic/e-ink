@@ -13,11 +13,35 @@ quotes.txt. For pixel-perfect work, keep dashboard.png open in Preview — it
 reloads automatically when the file changes.
 """
 
+import random
 import sys
+from datetime import date, timedelta
 
 import config
 from dashboard import build_image
 from sources.quote import get_quote
+
+
+def _mock_activities(seed):
+    """~4 weeks of logged activities (some days off, some doubled) for the grid."""
+    rng = random.Random(seed)
+    today = date.today()
+    types = ["Run", "Gym", "Boxing", "Swim", "Walk"]
+    out = []
+    for i in range(28):
+        d = today - timedelta(days=27 - i)
+        if rng.random() < 0.5:
+            out.append({"date": d, "type": rng.choice(types)})
+            if rng.random() < 0.2:  # occasional second session
+                out.append({"date": d, "type": rng.choice(types)})
+    return out
+
+
+def _mock_steps_week(seed):
+    """7 days of step counts, oldest→newest."""
+    rng = random.Random(seed)
+    today = date.today()
+    return [{"date": today - timedelta(days=6 - i), "steps": rng.randint(3000, 16000)} for i in range(7)]
 
 WEATHER = {
     "today": {"icon": "sun", "high": 28, "low": 16},
@@ -30,8 +54,16 @@ WEATHER = {
 }
 
 PEOPLE = [
-    {"name": "Matija", "resting_hr": 52, "sleep_score": 84},
-    {"name": "Vanja", "resting_hr": 58, "sleep_score": None},  # tests the "—" case
+    {
+        "name": "Matija", "resting_hr": 52, "bb_overnight": 47,
+        "vo2max": 48, "intensity_7d": 320, "avg_sleep_7d": 7.3 * 3600,
+        "activities": _mock_activities(1), "steps_7d": _mock_steps_week(1),
+    },
+    {
+        "name": "Vanja", "resting_hr": 58, "bb_overnight": 39,
+        "vo2max": None, "intensity_7d": 210, "avg_sleep_7d": 6.9 * 3600,
+        "activities": _mock_activities(7), "steps_7d": _mock_steps_week(7),
+    },
 ]
 
 

@@ -8,8 +8,10 @@ Actions) publishes it to a fixed URL the device fetches.
   they render identically on macOS and the CI runner.
 - **Quote** — a random multi-line quote from `quotes.txt` (entries separated by
   a blank line), wrapped and centered in the left block.
-- **Health** — resting HR + sleep score for each person in `config.PEOPLE`
-  (two Garmin accounts: husband + wife).
+- **Health** — one column per person in `config.PEOPLE` (two Garmin accounts):
+  resting HR + sleep score, a GitHub-style 30-day activity grid (a dot on every
+  day with a logged workout) beside a count of each activity type, and a 7-day
+  daily-steps bar chart.
 
 ## How it's organized
 The layout is **data, not code** — every panel is a named rectangle in
@@ -20,8 +22,10 @@ outline + label while you iterate.
 ```
 dashboard.py        entry point: fetch all sources → compose canvas → save PNG
 config.py           display size, PEOPLE, location, paths, LAYOUT, DEBUG_BOXES
-fonts.py            shared font loading
+fonts.py            shared font loading — JetBrains Mono, weight-aware
+assets/fonts/       bundled OFL TTFs — identical rendering locally and on CI
 icons.py            vector weather icons (sun / cloud / rain)
+grid.py             activity dot grid + 7-day steps bar chart
 sources/            one module per data source, each returns a clean dict
   weather.py          Open-Meteo (no API key)
   garmin.py           per-person resting HR + sleep score (parameterized)

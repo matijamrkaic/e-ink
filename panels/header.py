@@ -8,11 +8,8 @@ a small "Day  icon  hi°/lo°" box separated by thin dividers.
 Like every panel, it only draws inside its `box` = (x0, y0, x1, y1).
 """
 
+from colors import BLACK, GRAY, WHITE
 from icons import draw_weather_icon
-
-BLACK = 0
-WHITE = 255
-GRAY = 180
 
 
 def draw_header(draw, box, data, fonts, now_str):
@@ -22,10 +19,11 @@ def draw_header(draw, box, data, fonts, now_str):
 
     # ── Row 1: date + today's weather ─────────────────────────────────────────
     pad = 20
-    draw.text((x0 + pad, y0 + 12), data["date"], font=fonts["medium"], fill=WHITE)
+    date_font = fonts("medium", "bold")
+    draw.text((x0 + pad, y0 + 12), data["date"], font=date_font, fill=WHITE)
 
     # Date width → place the today icon just after it.
-    date_w = draw.textlength(data["date"], font=fonts["medium"])
+    date_w = draw.textlength(data["date"], font=date_font)
     icon_cx = x0 + pad + date_w + 35
     icon_cy = y0 + 28
     today = data["today"]
@@ -33,14 +31,14 @@ def draw_header(draw, box, data, fonts, now_str):
     draw.text(
         (icon_cx + 28, y0 + 12),
         f"{today['high']}°/{today['low']}°",
-        font=fonts["medium"],
+        font=fonts("medium", "bold"),
         fill=WHITE,
     )
 
     draw.text(
         (x1 - pad, y0 + 16),
         f"Updated {now_str}",
-        font=fonts["tiny"],
+        font=fonts("tiny", "light"),
         fill=GRAY,
         anchor="ra",
     )

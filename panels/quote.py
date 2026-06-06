@@ -1,14 +1,13 @@
 """
 panels/quote.py
 ===============
-Left-hand quote block. Renders a multi-line quote (a couplet or short stanza)
-centered in its square-ish box. Honors the quote's own line breaks, and also
-word-wraps any single line that's too wide for the box. Shrinks the font a step
-if the whole thing won't fit vertically.
+Full-width quote strip along the bottom: small white text on a dark background.
+Renders a multi-line quote (a couplet or short stanza) centered in its box,
+honoring the quote's own line breaks and word-wrapping any over-long line. Picks
+the largest font (small, then tiny) that fits the strip's height.
 """
 
-BLACK = 0
-GRAY = 180
+from colors import BLACK, WHITE
 
 
 def _wrap_line(draw, line, font, max_w):
@@ -30,7 +29,10 @@ def _wrap_line(draw, line, font, max_w):
 def draw_quote(draw, box, quote, fonts):
     """quote = a (possibly multi-line) string."""
     x0, y0, x1, y1 = box
-    pad = 28
+    # Dark background for the strip; text is drawn in white over it.
+    draw.rectangle([(x0, y0), (x1, y1)], fill=BLACK)
+
+    pad = 14
     max_w = (x1 - x0) - 2 * pad
     max_h = (y1 - y0) - 2 * pad
     if not quote:
@@ -48,13 +50,13 @@ def draw_quote(draw, box, quote, fonts):
     if attribution is not None:
         raw_lines.append(attribution)
 
-    # Try fonts largest-first; pick the biggest that fits the box height.
-    for font_name in ("medium", "small", "tiny"):
-        font = fonts[font_name]
+    # Small italic text: try small, then tiny; pick the largest that fits.
+    for font_name in ("small", "tiny"):
+        font = fonts(font_name, "book-italic")
         wrapped = []
         for line in raw_lines:
             wrapped.extend(_wrap_line(draw, line, font, max_w))
-        line_h = font.size + 8
+        line_h = font.size + 6
         total_h = line_h * len(wrapped)
         if total_h <= max_h or font_name == "tiny":
             break
@@ -63,5 +65,5 @@ def draw_quote(draw, box, quote, fonts):
     cy = y0 + pad + (max_h - total_h) / 2
     center_x = (x0 + x1) / 2
     for line in wrapped:
-        draw.text((center_x, cy), line, font=font, fill=BLACK, anchor="ma")
+        draw.text((center_x, cy), line, font=font, fill=WHITE, anchor="ma")
         cy += line_h
