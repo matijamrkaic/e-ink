@@ -130,21 +130,17 @@ def _activities(api, today):
 
 def _steps_week(api, today):
     """Daily steps for the last STEPS_DAYS as [{date, steps}], oldest→newest."""
-    start = (today - timedelta(days=STEPS_DAYS - 1)).isoformat()
-    raw = api.get_daily_steps(start, today.isoformat()) or []
-    out = []
+    start = today - timedelta(days=STEPS_DAYS - 1)
+    raw = api.get_daily_steps(start.isoformat(), today.isoformat()) or []
+    by_date = {}
     for entry in raw:
         day_str = entry.get("calendarDate")
-        if not day_str:
-            continue
-        out.append(
-            {
-                "date": datetime.strptime(day_str, "%Y-%m-%d").date(),
-                "steps": int(entry.get("totalSteps") or 0),
-            }
-        )
-    out.sort(key=lambda d: d["date"])
-    return out[-STEPS_DAYS:]
+        if day_str:
+            by_date[datetime.strptime(day_str, "%Y-%m-%d").date()] = int(entry.get("totalSteps") or 0)
+    return [
+        {"date": start + timedelta(days=i), "steps": by_date.get(start + timedelta(days=i), 0)}
+        for i in range(STEPS_DAYS)
+    ]
 
 
 def _vo2max(api, today):

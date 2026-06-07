@@ -73,14 +73,15 @@ def draw_steps_week(draw, box, steps_7d, fonts):
         cx = x0 + slot * i + slot / 2
         bh = (base - top) * (d["steps"] / max_steps)
         y_top = base - bh
-        draw.rectangle([cx - bar_w / 1.5, y_top, cx + bar_w / 1.5, base], fill=BLACK)
-        draw.text(
-            (cx, y_top - 3),
-            _steps_label(d["steps"]),
-            font=fonts("tiny", "bold"),
-            fill=BLACK,
-            anchor="mb",
-        )
+        if d["steps"] > 0:
+            draw.rectangle([cx - bar_w / 1.5, y_top, cx + bar_w / 1.5, base], fill=BLACK)
+            draw.text(
+                (cx, y_top - 3),
+                _steps_label(d["steps"]),
+                font=fonts("tiny", "bold"),
+                fill=BLACK,
+                anchor="mb",
+            )
         draw.text(
             (cx, base + 4),
             d["date"].strftime("%a"),
