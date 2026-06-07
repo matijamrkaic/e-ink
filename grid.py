@@ -14,7 +14,7 @@ Both draw inside the box (x0, y0, x1, y1) they're given.
 
 from datetime import timedelta
 
-from colors import BLACK, EMPTY, GRAY
+from colors import BLACK, DARK_GRAY, LIGHT_GRAY
 
 
 def draw_activity_grid(draw, box, active_dates, end_date, weeks=4):
@@ -29,7 +29,7 @@ def draw_activity_grid(draw, box, active_dates, end_date, weeks=4):
     this_monday = end_date - timedelta(days=end_date.weekday())
     start_monday = this_monday - timedelta(weeks=weeks - 1)
 
-    gap = 2
+    gap = 3
     cell = min((x1 - x0 - (7 - 1) * gap) / 7, (y1 - y0 - (weeks - 1) * gap) / weeks)
     cell = max(int(cell), 3)
     step = cell + gap
@@ -43,7 +43,7 @@ def draw_activity_grid(draw, box, active_dates, end_date, weeks=4):
         if d in active_dates:
             draw.rectangle([cx, cy, cx + cell, cy + cell], fill=BLACK)
         else:
-            draw.rectangle([cx, cy, cx + cell, cy + cell], outline=EMPTY, width=1)
+            draw.rectangle([cx, cy, cx + cell, cy + cell], outline=LIGHT_GRAY, width=1)
 
 
 def _steps_label(steps):
@@ -73,6 +73,18 @@ def draw_steps_week(draw, box, steps_7d, fonts):
         cx = x0 + slot * i + slot / 2
         bh = (base - top) * (d["steps"] / max_steps)
         y_top = base - bh
-        draw.rectangle([cx - bar_w / 2, y_top, cx + bar_w / 2, base], fill=BLACK)
-        draw.text((cx, y_top - 2), _steps_label(d["steps"]), font=fonts("tiny", "bold"), fill=BLACK, anchor="mb")
-        draw.text((cx, base + 2), d["date"].strftime("%a"), font=fonts("tiny", "light"), fill=GRAY, anchor="mt")
+        draw.rectangle([cx - bar_w / 1.5, y_top, cx + bar_w / 1.5, base], fill=BLACK)
+        draw.text(
+            (cx, y_top - 3),
+            _steps_label(d["steps"]),
+            font=fonts("tiny", "bold"),
+            fill=BLACK,
+            anchor="mb",
+        )
+        draw.text(
+            (cx, base + 4),
+            d["date"].strftime("%a"),
+            font=fonts("tiny", "light"),
+            fill=DARK_GRAY,
+            anchor="mt",
+        )

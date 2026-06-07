@@ -33,7 +33,7 @@ def draw_quote(draw, box, quote, fonts):
     draw.rectangle([(x0, y0), (x1, y1)], fill=BLACK)
 
     pad = 14
-    max_w = (x1 - x0) - 2 * pad
+    max_w = (x1 - x0) - 6 * pad
     max_h = (y1 - y0) - 2 * pad
     if not quote:
         return

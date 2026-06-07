@@ -36,13 +36,17 @@ def build_image(weather_data, people, quote_text):
     img = Image.new("L", (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), color=255)
     draw = ImageDraw.Draw(img)
 
-    now_str = datetime.now().strftime("%H:%M")
-    # Header wants today's date alongside the weather; attach it here.
-    weather_data = {**weather_data, "date": datetime.now().strftime("%A, %d/%m/%Y")}
+    now = datetime.now()
+    now_str = now.strftime("%H:%M")
+    weather_data = {
+        **weather_data,
+        "weekday": now.strftime("%A").upper(),
+        "date_fmt": now.strftime("%d / %m / %Y"),
+    }
 
     draw_header(draw, config.LAYOUT["header"], weather_data, fonts, now_str)
-    draw_quote(draw, config.LAYOUT["quote"], quote_text, fonts)
     draw_health(draw, config.LAYOUT["health"], people, fonts)
+    draw_quote(draw, config.LAYOUT["quote"], quote_text, fonts)
 
     if config.DEBUG_BOXES:
         _debug_boxes(draw, fonts)
