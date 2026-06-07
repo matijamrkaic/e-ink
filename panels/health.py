@@ -68,6 +68,11 @@ def draw_health(draw, box, people, fonts):
     n = max(len(people), 1)
     col_w = (x1 - x0) / n
 
+    global_max_steps = max(
+        (d["steps"] for p in people for d in (p.get("steps_7d") or [])),
+        default=0,
+    ) or 1
+
     for i, person in enumerate(people):
         cx0 = x0 + i * col_w
         cx1 = cx0 + col_w
@@ -148,4 +153,4 @@ def draw_health(draw, box, people, fonts):
             fill=DARK_GRAY,
         )
         steps_box = (ix, y0 + Y_STEPS_TOP, cx1 - PAD, y1 - 4)
-        draw_steps_week(draw, steps_box, steps_7d, fonts)
+        draw_steps_week(draw, steps_box, steps_7d, fonts, global_max=global_max_steps)

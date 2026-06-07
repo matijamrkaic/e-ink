@@ -53,8 +53,12 @@ def _steps_label(steps):
     return str(steps)
 
 
-def draw_steps_week(draw, box, steps_7d, fonts):
-    """steps_7d = [{date, steps}] oldest→newest. One bar per day."""
+def draw_steps_week(draw, box, steps_7d, fonts, global_max=None):
+    """steps_7d = [{date, steps}] oldest→newest. One bar per day.
+
+    global_max: if provided, bars are scaled relative to this value so that
+    multiple users' charts are visually comparable.
+    """
     x0, y0, x1, y1 = box
     if not steps_7d:
         return
@@ -63,7 +67,8 @@ def draw_steps_week(draw, box, steps_7d, fonts):
     count_h = 16  # count text above the tallest bar
     base = y1 - label_h
     top = y0 + count_h
-    max_steps = max((d["steps"] for d in steps_7d), default=0) or 1
+    local_max = max((d["steps"] for d in steps_7d), default=0)
+    max_steps = (global_max if global_max else local_max) or 1
 
     n = len(steps_7d)
     slot = (x1 - x0) / n
