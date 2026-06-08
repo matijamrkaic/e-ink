@@ -21,9 +21,9 @@ from datetime import date, datetime, timedelta
 
 from garminconnect import Garmin, GarminConnectAuthenticationError
 
-# Window for the activity grid + type counts: 4 whole weeks. Fetch 28 days back,
-# which always covers the grid's oldest week regardless of today's weekday.
-ACTIVITY_DAYS = 28
+# Window for the activity grid + type counts: 5 rows (4 complete past weeks +
+# current partial week). Fetch 35 days back to always cover the oldest row.
+ACTIVITY_DAYS = 35
 # Window for the daily-steps bar chart.
 STEPS_DAYS = 7
 
@@ -124,7 +124,8 @@ def _activities(api, today):
         except ValueError:
             continue
         type_key = (a.get("activityType") or {}).get("typeKey")
-        out.append({"date": day, "type": _activity_label(type_key)})
+        duration = int(a.get("duration") or 0)
+        out.append({"date": day, "type": _activity_label(type_key), "duration": duration})
     return out
 
 
@@ -198,7 +199,7 @@ def _week_stats(api, today):
 
 
 def get_person(person):
-    """Fetch the health metrics, 4-week activities, and 7-day steps for a person."""
+    """Fetch the health metrics, 5-week activities, and 7-day steps for a person."""
     print(f"→ Fetching Garmin for {person['name']}...")
     api = _login(person)
     today = date.today()

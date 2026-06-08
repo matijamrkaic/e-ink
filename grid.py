@@ -17,13 +17,12 @@ from datetime import timedelta
 from colors import BLACK, DARK_GRAY, LIGHT_GRAY
 
 
-def draw_activity_grid(draw, box, active_dates, end_date, weeks=4):
+def draw_activity_grid(draw, box, active_dates, end_date, weeks=5):
     """
     active_dates = set of date objects that had >= 1 logged activity.
-    Renders a horizontal calendar anchored to whole weeks: weekday columns (Mon
-    left → Sun right, 7 wide) and one row per week (oldest top). Always exactly
-    `weeks` clean rows ending with the week that contains end_date; days later in
-    the current week than end_date just render as empty squares.
+    Renders a horizontal calendar: 4 complete past weeks (rows 0–3) plus the
+    current partial week (row 4, bottom). Each row starts on Monday. Days after
+    end_date in the bottom row are not drawn.
     """
     x0, y0, x1, y1 = box
     this_monday = end_date - timedelta(days=end_date.weekday())
@@ -36,6 +35,8 @@ def draw_activity_grid(draw, box, active_dates, end_date, weeks=4):
 
     for offset in range(weeks * 7):
         d = start_monday + timedelta(days=offset)
+        if d > end_date:
+            continue
         col = d.weekday()
         row = offset // 7
         cx = x0 + col * step
@@ -77,7 +78,7 @@ def draw_steps_week(draw, box, steps_7d, fonts, global_max=None):
     for i, d in enumerate(steps_7d):
         cx = x0 + slot * i + slot / 2
         bh = (base - top) * (d["steps"] / max_steps)
-        y_top = base - bh
+        y_top = max(top, base - bh)
         if d["steps"] > 0:
             draw.rectangle([cx - bar_w / 1.5, y_top, cx + bar_w / 1.5, base], fill=BLACK)
             draw.text(

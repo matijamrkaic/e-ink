@@ -22,7 +22,7 @@ from grid import draw_activity_grid, draw_steps_week
 
 PAD = 16
 GRID_W = 150  # width reserved for the dot grid; counts sit to its right
-MAX_TYPES = 4  # how many activity types to list
+MAX_TYPES = 5  # how many activity types to list
 
 # Y offsets from the top of the health box.
 Y_NAME = 4
@@ -30,9 +30,9 @@ Y_MET_LABEL = 30  # metric labels (small caption above each value)
 Y_MET_VALUE = 46  # metric values (larger)
 Y_ACT_LABEL = 90
 Y_ACT_TOP = 120
-Y_ACT_BOTTOM = 200
-Y_STEPS_LABEL = 220
-Y_STEPS_TOP = 250
+Y_ACT_BOTTOM = 220
+Y_STEPS_LABEL = 242
+Y_STEPS_TOP = 278
 
 
 def _num(value):
@@ -68,10 +68,13 @@ def draw_health(draw, box, people, fonts):
     n = max(len(people), 1)
     col_w = (x1 - x0) / n
 
-    global_max_steps = max(
-        (d["steps"] for p in people for d in (p.get("steps_7d") or [])),
-        default=0,
-    ) or 1
+    global_max_steps = (
+        max(
+            (d["steps"] for p in people for d in (p.get("steps_7d") or [])),
+            default=0,
+        )
+        or 1
+    )
 
     for i, person in enumerate(people):
         cx0 = x0 + i * col_w
@@ -109,10 +112,13 @@ def draw_health(draw, box, people, fonts):
         activities = person.get("activities") or []
         active_dates = {a["date"] for a in activities}
         counts = Counter(a["type"] for a in activities)
+        durations = {}
+        for a in activities:
+            durations[a["type"]] = durations.get(a["type"], 0) + a.get("duration", 0)
 
         draw.text(
             (ix, y0 + Y_ACT_LABEL),
-            f"ACTIVITIES · 4 WEEKS · TOTAL {len(activities)}",
+            f"ACTIVITIES · 5 WEEKS · TOTAL {len(activities)}",
             font=fonts("tiny", "light"),
             fill=DARK_GRAY,
         )
@@ -122,7 +128,15 @@ def draw_health(draw, box, people, fonts):
         counts_x = ix + GRID_W + 36
         cy = y0 + Y_ACT_TOP - 2
         if counts:
-            for label, cnt in counts.most_common(MAX_TYPES):
+            sorted_types = sorted(
+                counts, key=lambda l: (counts[l], durations.get(l, 0)), reverse=True
+            )
+            for label in sorted_types[:MAX_TYPES]:
+                cnt = counts[label]
+                secs = durations.get(label, 0)
+                hh = secs // 3600
+                mm = (secs % 3600) // 60
+                time_str = f"[{hh:02d}:{mm:02d}]"
                 draw.text(
                     (counts_x, cy),
                     f"{cnt}",
@@ -131,7 +145,10 @@ def draw_health(draw, box, people, fonts):
                     anchor="ra",
                 )
                 draw.text(
-                    (counts_x + 8, cy), label, font=fonts(16, "light"), fill=BLACK
+                    (counts_x + 8, cy),
+                    f"{time_str} {label}",
+                    font=fonts(16, "light"),
+                    fill=BLACK,
                 )
                 cy += 20
         else:
