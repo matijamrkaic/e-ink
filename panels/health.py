@@ -21,7 +21,7 @@ from colors import BLACK, DARK_GRAY
 from grid import draw_activity_grid, draw_steps_week
 
 PAD = 16
-GRID_W = 150  # width reserved for the dot grid; counts sit to its right
+GRID_W = 110  # width reserved for the dot grid; counts sit to its right
 MAX_TYPES = 5  # how many activity types to list
 
 # Y offsets from the top of the health box.
@@ -30,9 +30,9 @@ Y_MET_LABEL = 30  # metric labels (small caption above each value)
 Y_MET_VALUE = 46  # metric values (larger)
 Y_ACT_LABEL = 90
 Y_ACT_TOP = 120
-Y_ACT_BOTTOM = 220
-Y_STEPS_LABEL = 242
-Y_STEPS_TOP = 278
+Y_ACT_BOTTOM = 200
+Y_STEPS_LABEL = 215
+Y_STEPS_TOP = 240
 
 
 def _num(value):
@@ -116,11 +116,20 @@ def draw_health(draw, box, people, fonts):
         for a in activities:
             durations[a["type"]] = durations.get(a["type"], 0) + a.get("duration", 0)
 
+        act_prefix = "ACTIVITIES · 5 WEEKS · "
+        act_total = f"TOTAL {len(activities)}"
         draw.text(
             (ix, y0 + Y_ACT_LABEL),
-            f"ACTIVITIES · 5 WEEKS · TOTAL {len(activities)}",
+            act_prefix,
             font=fonts("tiny", "light"),
             fill=DARK_GRAY,
+        )
+        prefix_w = draw.textlength(act_prefix, font=fonts("tiny", "light"))
+        draw.text(
+            (ix + prefix_w, y0 + Y_ACT_LABEL),
+            act_total,
+            font=fonts("tiny", "bold"),
+            fill=BLACK,
         )
         grid_box = (ix, y0 + Y_ACT_TOP, ix + GRID_W, y0 + Y_ACT_BOTTOM)
         draw_activity_grid(draw, grid_box, active_dates, today)
@@ -140,17 +149,17 @@ def draw_health(draw, box, people, fonts):
                 draw.text(
                     (counts_x, cy),
                     f"{cnt}",
-                    font=fonts(16, "bold"),
+                    font=fonts(13, "bold"),
                     fill=BLACK,
                     anchor="ra",
                 )
                 draw.text(
                     (counts_x + 8, cy),
                     f"{time_str} {label}",
-                    font=fonts(16, "light"),
+                    font=fonts(13, "light"),
                     fill=BLACK,
                 )
-                cy += 20
+                cy += 16
         else:
             draw.text(
                 (counts_x, cy),
@@ -162,12 +171,20 @@ def draw_health(draw, box, people, fonts):
         # ── 7-day steps bar chart ────────────────────────────────────────────
         steps_7d = person.get("steps_7d") or []
         total = sum(d["steps"] for d in steps_7d)
-        steps_label = f"STEPS · 7 DAYS · TOTAL {total:,}"
+        steps_prefix = "STEPS · 7 DAYS · "
+        steps_total = f"TOTAL {total:,}"
         draw.text(
             (ix, y0 + Y_STEPS_LABEL),
-            steps_label,
+            steps_prefix,
             font=fonts("tiny", "light"),
             fill=DARK_GRAY,
+        )
+        steps_prefix_w = draw.textlength(steps_prefix, font=fonts("tiny", "light"))
+        draw.text(
+            (ix + steps_prefix_w, y0 + Y_STEPS_LABEL),
+            steps_total,
+            font=fonts("tiny", "bold"),
+            fill=BLACK,
         )
         steps_box = (ix, y0 + Y_STEPS_TOP, cx1 - PAD, y1 - 4)
         draw_steps_week(draw, steps_box, steps_7d, fonts, global_max=global_max_steps)
