@@ -21,12 +21,12 @@ import config
 
 def _code_to_icon(code):
     """Bucket a WMO weather code into 'sun' | 'cloud' | 'rain'."""
-    if code in (0, 1):
+    if code in (0, 1, 2):
         return "sun"
-    # 51+ covers drizzle, rain, snow, showers, thunderstorm — all "wet".
-    if code >= 51:
+    # 53+ cover rain, snow, showers, thunderstorm
+    if code >= 53:
         return "rain"
-    return "cloud"  # 2, 3, 45, 48 (cloudy / fog)
+    return "cloud"  # 3, 45, 48 (cloudy / fog)
 
 
 def fetch_weather():
@@ -39,7 +39,9 @@ def fetch_weather():
         "forecast_days": config.FORECAST_DAYS,
         "daily": ["temperature_2m_max", "temperature_2m_min", "weathercode"],
     }
-    resp = requests.get("https://api.open-meteo.com/v1/forecast", params=params, timeout=10)
+    resp = requests.get(
+        "https://api.open-meteo.com/v1/forecast", params=params, timeout=10
+    )
     resp.raise_for_status()
     print("  ✓ Got weather")
     return resp.json()
