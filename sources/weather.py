@@ -12,7 +12,7 @@ WMO weather codes are bucketed into just three icon kinds (sun / cloud / rain)
 to match the simplified header design.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 
@@ -66,6 +66,32 @@ def parse_weather(data):
     }
 
 
+def _empty_weather():
+    """Placeholder used when the API call fails: no icon, '-' temps."""
+    today = datetime.now()
+
+    def day(offset):
+        return {
+            "day": (today + timedelta(days=offset)).strftime("%a"),
+            "icon": None,
+            "high": None,
+            "low": None,
+        }
+
+    return {
+        "today": day(0),
+        "forecast": [day(i) for i in range(1, config.FORECAST_DAYS)],
+    }
+
+
 def get_weather():
-    """Convenience: fetch + parse in one call."""
-    return parse_weather(fetch_weather())
+    """Convenience: fetch + parse in one call.
+
+    A weather failure must not bring down the whole dashboard, so on any error
+    we log it and fall back to placeholder data ('-' temps, no icon).
+    """
+    try:
+        return parse_weather(fetch_weather())
+    except Exception as err:
+        print(f"  ✗ Weather fetch failed ({err}); rendering placeholders")
+        return _empty_weather()

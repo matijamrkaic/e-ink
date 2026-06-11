@@ -32,14 +32,16 @@ def _weather_col(draw, cx0, y0, label, icon, high, low, fonts, today=False):
 
     icon_cx = cx0 + PAD + icon_size // 2
     icon_cy = y0 + Y_ICON
-    draw_weather_icon(draw, icon_cx, icon_cy, icon, icon_size, color=WHITE)
+    if icon is not None:
+        draw_weather_icon(draw, icon_cx, icon_cy, icon, icon_size, color=WHITE)
 
     tx = icon_cx + icon_size // 2 + 10
     ty = y0 + Y_ICON
-    high_str = f"{high}°"
+    high_str = "—" if high is None else f"{high}°"
     high_w = draw.textlength(high_str, font=high_font)
     draw.text((tx, ty), high_str, font=high_font, fill=WHITE, anchor="lm")
-    draw.text((tx + high_w, ty), f"/{low}°", font=low_font, fill=WHITE, anchor="lm")
+    low_str = "—" if low is None else f"/{low}°"
+    draw.text((tx + high_w, ty), low_str, font=low_font, fill=WHITE, anchor="lm")
 
 
 def draw_header(draw, box, data, fonts, now_str):

@@ -9,6 +9,7 @@ path/to/venv/
 
 .env
 .DS_Store
+.zed
 
 # Garmin token store / exported token blobs — never commit these
 .garminconnect/
