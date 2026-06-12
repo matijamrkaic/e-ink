@@ -56,12 +56,12 @@ WEATHER = {
 PEOPLE = [
     {
         "name": "Matija", "resting_hr": 52, "bb_overnight": 47,
-        "vo2max": 48, "intensity_7d": 320, "avg_sleep_7d": 7.3 * 3600,
+        "avg_kcal_7d": 2840, "intensity_7d": 320, "avg_sleep_7d": 7.3 * 3600,
         "activities": _mock_activities(1), "steps_7d": _mock_steps_week(1),
     },
     {
         "name": "Vanja", "resting_hr": 58, "bb_overnight": 39,
-        "vo2max": None, "intensity_7d": 210, "avg_sleep_7d": 6.9 * 3600,
+        "avg_kcal_7d": None, "intensity_7d": 210, "avg_sleep_7d": 6.9 * 3600,
         "activities": _mock_activities(7), "steps_7d": _mock_steps_week(7),
     },
 ]

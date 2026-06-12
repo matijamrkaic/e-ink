@@ -17,7 +17,7 @@ re-run `python preview.py` to iterate.
 from collections import Counter
 from datetime import date
 
-from colors import BLACK, DARK_GRAY
+from colors import BLACK, DARK_GRAY, LIGHT_GRAY
 from grid import draw_activity_grid, draw_steps_week
 
 PAD = 16
@@ -35,12 +35,60 @@ Y_STEPS_LABEL = 215
 Y_STEPS_TOP = 240
 
 
+def _draw_value(draw, pos, text, font, fill, gap=2, anchor="la"):
+    """Draw a metric value, rendering any '.' as a small baseline dot in a
+    narrow gap instead of the full-width monospace period cell (which leaves a
+    lot of white space around the point in values like '2.8k'). anchor="ma"
+    centers the value horizontally on the given x — a trailing minutes mark (')
+    hangs to the right and is excluded from that centering, so the number itself
+    stays aligned under the label."""
+    x, y = pos
+    suffix = ""
+    if text.endswith("'"):
+        text, suffix = text[:-1], "'"
+
+    dot_r = max(1.0, font.size / 20)
+    sep_w = gap * 2 + dot_r * 2
+    head, _, tail = text.partition(".")
+    head_w = draw.textlength(head, font=font)
+    core_w = head_w + (sep_w + draw.textlength(tail, font=font) if tail else 0)
+
+    if anchor == "ma":  # center the number on x, counting only half the suffix
+        x -= (core_w + draw.textlength(suffix, font=font) * 0.5) / 2
+
+    draw.text((x, y), head, font=font, fill=fill)
+    x += head_w
+    if tail:
+        baseline = font.getbbox("0")[3]  # digits sit on the baseline (no descender)
+        cx, cy = x + gap + 2, y + baseline - dot_r - 1
+        draw.rectangle([cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r], fill=fill)
+        x += sep_w
+        draw.text((x, y), tail, font=font, fill=fill)
+        x += draw.textlength(tail, font=font)
+    if suffix:
+        draw.text((x, y), suffix, font=font, fill=fill)
+
+
 def _num(value):
     return "—" if value is None else str(value)
 
 
 def _hours(seconds):
-    return "—" if not seconds else f"{seconds / 3600:.1f}h"
+    """Duration as hours + minutes: 27000s -> \"7h30'\"."""
+    if not seconds:
+        return "—"
+    h, m = divmod(round(seconds / 60), 60)
+    return f"{h}h{m:02d}'"
+
+
+def _kcal(value):
+    """Daily calories, rounded to the nearest hundred: 2514 -> '2500'."""
+    return "—" if not value else str(round(value / 100) * 100)
+
+
+def _mins(value):
+    """Intensity minutes: 320 -> \"320'\"."""
+    return "—" if value is None else f"{value}'"
 
 
 def _bb(p):
@@ -55,9 +103,9 @@ def _bb(p):
 METRICS = [
     ("RHR", lambda p: _num(p.get("resting_hr"))),
     ("BB GAIN", _bb),
-    ("VO2 MAX", lambda p: _num(p.get("vo2max"))),
-    ("INT·7D", lambda p: _num(p.get("intensity_7d"))),
-    ("SLEEP·7D", lambda p: _hours(p.get("avg_sleep_7d"))),
+    ("SLEEP•AVG", lambda p: _hours(p.get("avg_sleep_7d"))),
+    ("KCAL•AVG", lambda p: _kcal(p.get("avg_kcal_7d"))),
+    ("INT•7D", lambda p: _mins(p.get("intensity_7d"))),
 ]
 
 
@@ -92,21 +140,41 @@ def draw_health(draw, box, people, fonts):
         )
 
         # Metrics grid: small light label above larger bold value, one per cell.
-        mslot = (col_w - 2 * PAD) / len(METRICS)
+        # Each column is as wide as its label, and the leftover horizontal space
+        # is split into equal gaps between columns (so columns are dynamic, not
+        # evenly slotted, but the whitespace between them is uniform).
+        label_font = fonts("tiny", "light")
+        label_ws = [draw.textlength(label, font=label_font) for label, _ in METRICS]
+        avail = col_w - 2 * PAD
+        gap = (avail - sum(label_ws)) / (len(METRICS) - 1) if len(METRICS) > 1 else 0
+        mx = ix
         for j, (label, value_of) in enumerate(METRICS):
-            mx = ix + j * mslot
+            # Light dividers in the gaps before SLEEP•AVG and before INT•7D,
+            # grouping daily metrics | 7-day averages | intensity.
+            if j in (2, 4):
+                div_x = mx - gap / 2
+                draw.line(
+                    [(div_x, y0 + Y_MET_LABEL), (div_x, y0 + Y_MET_VALUE + 28)],
+                    fill=LIGHT_GRAY,
+                    width=1,
+                )
+            center = mx + label_ws[j] / 2
             draw.text(
-                (mx, y0 + Y_MET_LABEL),
+                (center, y0 + Y_MET_LABEL),
                 label,
-                font=fonts("tiny", "light"),
+                font=label_font,
                 fill=DARK_GRAY,
+                anchor="ma",
             )
-            draw.text(
-                (mx, y0 + Y_MET_VALUE),
+            _draw_value(
+                draw,
+                (center, y0 + Y_MET_VALUE),
                 value_of(person),
-                font=fonts("medium", "bold"),
-                fill=BLACK,
+                fonts(26, "bold"),
+                BLACK,
+                anchor="ma",
             )
+            mx += label_ws[j] + gap
 
         # ── Activity dot grid + type counts ──────────────────────────────────
         activities = person.get("activities") or []

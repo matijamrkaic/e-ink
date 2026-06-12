@@ -67,13 +67,6 @@ def _deep_find(obj, key):
     return None
 
 
-def _vo2max_from(payload):
-    """Extract a VO2 max number from a get_max_metrics response."""
-    for key in ("vo2MaxPreciseValue", "vo2MaxValue"):
-        val = _deep_find(payload, key)
-        if val is not None:
-            return round(val)
-    return None
 
 
 def _login(person):
@@ -144,27 +137,6 @@ def _steps_week(api, today):
     ]
 
 
-def _vo2max(api, today):
-    """
-    Most recent VO2 Max. get_max_metrics is empty on some accounts, so prefer
-    training status (which carries the latest value); fall back to max_metrics.
-    Both are walked over recent days since VO2 max isn't written daily.
-    """
-    for getter in ("get_training_status", "get_max_metrics"):
-        fn = getattr(api, getter, None)
-        if fn is None:
-            continue
-        for back in (0, 1, 3, 7, 14):
-            try:
-                data = fn((today - timedelta(days=back)).isoformat())
-            except Exception:
-                data = None
-            val = _vo2max_from(data)
-            if val:
-                return val
-    return None
-
-
 def _week_stats(api, today):
     """
     One pass over the last 7 days. Returns:
@@ -172,12 +144,14 @@ def _week_stats(api, today):
       bb_overnight   — most recent night's Body Battery change (overnight recharge)
       intensity_7d   — Σ moderate + 2×vigorous intensity minutes
       avg_sleep_7d   — mean sleep seconds over days that have data (or None)
+      avg_kcal_7d    — mean daily total calories over days that have data (or None)
     Walking newest→oldest and keeping the first value found makes "current" tolerant
     of today not having synced yet.
     """
     resting_hr = bb_overnight = None
     intensity_7d = 0
     sleep_seconds = []
+    kcals = []
     for i in range(7):
         iso = (today - timedelta(days=i)).isoformat()
         st = api.get_stats(iso) or {}
@@ -194,8 +168,12 @@ def _week_stats(api, today):
         secs = _deep_find(sl, "sleepTimeSeconds") or 0
         if secs:
             sleep_seconds.append(secs)
+        kcal = st.get("totalKilocalories")
+        if kcal:
+            kcals.append(kcal)
     avg_sleep_7d = sum(sleep_seconds) / len(sleep_seconds) if sleep_seconds else None
-    return resting_hr, bb_overnight, intensity_7d, avg_sleep_7d
+    avg_kcal_7d = sum(kcals) / len(kcals) if kcals else None
+    return resting_hr, bb_overnight, intensity_7d, avg_sleep_7d, avg_kcal_7d
 
 
 def get_person(person):
@@ -204,25 +182,23 @@ def get_person(person):
     api = _login(person)
     today = date.today()
 
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=3) as ex:
         f_week = ex.submit(_week_stats, api, today)
-        f_vo2 = ex.submit(_vo2max, api, today)
         f_acts = ex.submit(_activities, api, today)
         f_steps = ex.submit(_steps_week, api, today)
-    resting_hr, bb_overnight, intensity_7d, avg_sleep_7d = f_week.result()
-    vo2max = f_vo2.result()
+    resting_hr, bb_overnight, intensity_7d, avg_sleep_7d, avg_kcal_7d = f_week.result()
     activities = f_acts.result()
     steps_7d = f_steps.result()
 
     print(
         f"  ✓ {person['name']}: HR={resting_hr} bb_overnight={bb_overnight} "
-        f"vo2={vo2max} int7d={intensity_7d} activities={len(activities)}"
+        f"kcal7d={avg_kcal_7d} int7d={intensity_7d} activities={len(activities)}"
     )
     return {
         "name": person["name"],
         "resting_hr": resting_hr,
         "bb_overnight": bb_overnight,
-        "vo2max": vo2max,
+        "avg_kcal_7d": avg_kcal_7d,
         "intensity_7d": intensity_7d,
         "avg_sleep_7d": avg_sleep_7d,
         "activities": activities,
